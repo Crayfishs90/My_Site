@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My iPhone Webpage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 2em; text-align: center; }
+    h1 { color: #ff6600; }
+  </style>
+</head>
+<body>
+  <h1>Hello from my iPhone!</h1>
+  <p>This is a simple HTML page deployed from iOS.</p>
+</body>
+</html>

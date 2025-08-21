@@ -1,0 +1,70 @@
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antibody Registry</title>
+<link rel="stylesheet" href="assets/style.css"><script src="assets/util.js"></script>
+</head><body><main>
+<h1>Antibody Registry</h1>
+
+<div class="card">
+  <div class="grid">
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Target</label><input id="target" placeholder="e.g., GFAP"></div>
+    <div><label>Clone</label><input id="clone" placeholder="e.g., GA5"></div>
+    <div><label>Host</label><input id="host" placeholder="mouse/rabbit/goat"></div>
+    <div><label>Reactivity</label><input id="reactivity" placeholder="mouse/rat/human"></div>
+    <div><label>Vendor</label><input id="vendor" placeholder="e.g., Cell Signaling"></div>
+    <div><label>Catalog</label><input id="catalog"></div>
+    <div><label>Lot</label><input id="lot"></div>
+    <div><label>Dilution</label><input id="dilution" placeholder="1:1000"></div>
+    <div><label>Application</label><input id="application" placeholder="WB/IF/IHC/ELISA"></div>
+    <div><label>Storage</label><input id="storage" placeholder="-20°C / 4°C"></div>
+    <div><label>Box</label><input id="box"></div>
+    <div><label>Position</label><input id="position" placeholder="A3"></div>
+    <div><label>Expiry</label><input id="expiry" type="date"></div>
+  </div>
+  <label>Notes</label><textarea id="notes" rows="2"></textarea>
+  <div class="actions">
+    <button id="save">Save to server</button>
+  </div>
+</div>
+
+<div class="card">
+  <table id="tbl"><thead>
+    <tr><th>Date</th><th>Target</th><th>Clone</th><th>Host</th><th>Reactivity</th><th>Vendor</th>
+        <th>Catalog</th><th>Lot</th><th>Dilution</th><th>App</th><th>Storage</th>
+        <th>Box</th><th>Pos</th><th>Expiry</th><th>Notes</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+const state = loadLocal('ab_registry_v1',[]);
+date.value = todayISO();
+
+function rowObj(){
+  return {
+    date: date.value, target: target.value.trim(), clone: clone.value.trim(), host: host.value.trim(),
+    reactivity: reactivity.value.trim(), vendor: vendor.value.trim(), catalog: catalog.value.trim(),
+    lot: lot.value.trim(), dilution: dilution.value.trim(), application: application.value.trim(),
+    storage: storage.value.trim(), box: box.value.trim(), position: position.value.trim(),
+    expiry: expiry.value, notes: notes.value.trim()
+  };
+}
+function render(){
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  state.forEach(r=>{const tr=document.createElement('tr'); r.forEach(v=>{const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);}); tb.appendChild(tr);});
+  saveLocal('ab_registry_v1',state);
+}
+document.getElementById('save').onclick = async () => {
+  const o = rowObj();
+  state.push(Object.values(o)); render();
+  try {
+    const r = await fetch('/append_csv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_name:'antibody_registry',row:o})});
+    const t = await r.text(); let j={}; try{j=JSON.parse(t)}catch{}
+    if(!r.ok || !j.ok) alert('Server save failed: '+(j.error||t));
+  } catch(e){ alert('Network error: '+e); }
+};
+render();
+</script>
+</body></html>

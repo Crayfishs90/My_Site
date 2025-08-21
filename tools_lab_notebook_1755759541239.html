@@ -1,0 +1,75 @@
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lab Notebook</title>
+<link rel="stylesheet" href="assets/style.css"><script src="assets/util.js"></script>
+<style>
+textarea#body{min-height:220px;font-family:ui-monospace,Consolas,Menlo,monospace}
+.code{font-family:ui-monospace,Consolas,Menlo,monospace;background:#121212;border:1px solid #333;border-radius:6px;padding:.5rem}
+.small{opacity:.7}
+</style>
+</head><body><main>
+<h1>Lab Notebook</h1>
+
+<div class="card">
+  <div class="grid">
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Title</label><input id="title" placeholder="e.g., LPS+ROT 2-week endpoint"></div>
+    <div><label>Experiment ID</label><input id="expid" placeholder="e.g., LGUT-042"></div>
+    <div><label>Project</label><input id="project" placeholder="e.g., LeakyGut"></div>
+    <div><label>Tags (comma)</label><input id="tags" placeholder="e.g., ELISA, histology"></div>
+    <div><label>Author</label><input id="author" placeholder="your initials"></div>
+  </div>
+  <label>Links (comma-sep URLs or IDs)</label><input id="links" placeholder="e.g., gdoc, drive links, slide IDs">
+  <label>Body (Markdown)</label><textarea id="body"></textarea>
+  <label>Private notes (not for export)</label><textarea id="notes" rows="2"></textarea>
+
+  <div class="actions">
+    <button id="save">Save to server</button>
+    <button id="export">Export CSV (local cache)</button>
+    <button id="clear">Clear local cache</button>
+  </div>
+  <p class="small">Autosaves locally. “Save to server” appends to <code>data/lab_notebook.csv</code>.</p>
+</div>
+
+<div class="card">
+  <table id="tbl"><thead>
+    <tr><th>Date</th><th>Title</th><th>Experiment</th><th>Project</th><th>Tags</th><th>Author</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+const KEY='lab_nb_v1'; const state=loadLocal(KEY,[]);
+date.value=todayISO();
+
+function obj(){
+  return {
+    date:date.value, title:title.value.trim(), experiment_id:expid.value.trim(),
+    project:project.value.trim(), tags:tags.value.trim(),
+    body_md:body.value, links:links.value.trim(),
+    author:author.value.trim(), notes:notes.value.trim()
+  };
+}
+function row(o){ return [o.date,o.title,o.experiment_id,o.project,o.tags,o.author]; }
+function render(){
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  state.forEach(r=>{const tr=document.createElement('tr'); r.forEach(v=>{const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);}); tb.appendChild(tr);});
+  saveLocal(KEY,state);
+}
+document.getElementById('save').onclick=async()=>{
+  const o=obj(); state.push(row(o)); render();
+  try{
+    const r=await fetch('/append_csv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_name:'lab_notebook',row:o})});
+    const t=await r.text(); let j={}; try{j=JSON.parse(t)}catch{}
+    if(!r.ok||!j.ok) alert('Server save failed: '+(j.error||t));
+    else alert('Saved: '+j.path);
+  }catch(e){ alert('Network error: '+e); }
+};
+document.getElementById('export').onclick=()=>{
+  downloadCSV('lab_notebook_local.csv',[['Date','Title','Experiment','Project','Tags','Author'],...state]);
+};
+document.getElementById('clear').onclick=()=>{ if(confirm('Clear local cache?')){ state.length=0; render(); } };
+render();
+</script>
+</body></html>

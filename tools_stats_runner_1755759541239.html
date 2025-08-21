@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stats Runner</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main>
+<h1>Stats Runner</h1>
+<p class="small">Upload CSV → choose columns → run t-test / ANOVA / Kruskal. Shows server response unfiltered.</p>
+
+<div class="card">
+  <label>CSV File</label>
+  <input type="file" id="file" accept=".csv">
+
+  <div class="grid" style="margin-top:10px">
+    <div>
+      <label>Group Column</label>
+      <select id="group"></select>
+    </div>
+    <div>
+      <label>Value Column</label>
+      <select id="value"></select>
+    </div>
+    <div>
+      <label>Test</label>
+      <select id="test">
+        <option value="ttest">t-test (2 groups)</option>
+        <option value="anova" selected>One-way ANOVA (+Tukey)</option>
+        <option value="kruskal">Kruskal–Wallis (+Dunn)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="run">Run</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Results</h3>
+  <pre id="results">–</pre>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+
+<script>
+// === helper: parse the first line to get headers ===
+function parseHeader(firstLine){
+  // split commas but keep quoted fields intact
+  const m = firstLine.trim().replace(/\r$/, '').match(/(?:"[^"]*"|[^,])+/g);
+  return (m || []).map(s => s.replace(/^"|"$/g,'').trim());
+}
+
+const fileInput = document.getElementById('file');
+const groupSel  = document.getElementById('group');
+const valueSel  = document.getElementById('value');
+const resultsEl = document.getElementById('results');
+
+function setOptions(select, names){
+  select.innerHTML = '';
+  names.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = n;
+    select.appendChild(opt);
+  });
+}
+
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const txt = reader.result || '';
+    const firstLine = txt.split(/\n/)[0] || '';
+    const headers = parseHeader(firstLine);
+    if (headers.length === 0){
+      resultsEl.textContent = 'Could not read header row from CSV.';
+      return;
+    }
+    setOptions(groupSel, headers);
+    setOptions(valueSel, headers);
+    // best guess defaults:
+    if (headers.includes('Group')) groupSel.value = 'Group';
+    if (headers.includes('Value')) valueSel.value = 'Value';
+  };
+  reader.readAsText(f);
+});
+
+document.getElementById('run').onclick = async () => {
+  const file = fileInput.files[0];
+  const group = groupSel.value;
+  const value = valueSel.value;
+  const test  = document.getElementById('test').value;
+
+  if (!file){ alert('Choose a CSV file.'); return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('group', group);
+  fd.append('value', value);
+  fd.append('test',  test);
+
+  try {
+    // Use SAME-ORIGIN path; works for single-app (port 8000) and for two-app with proxy/CORS.
+    const res  = await fetch('/run_stats', { method: 'POST', body: fd });
+    const text = await res.text();         // show something even if not JSON
+    let data;
+    try { data = JSON.parse(text); }
+    catch { data = {raw:text}; }
+
+    resultsEl.textContent = JSON.stringify({
+      status: res.status,
+      ok: res.ok,
+      ...data
+    }, null, 2);
+  } catch (e){
+    resultsEl.textContent = 'Fetch error: ' + (e && e.message ? e.message : e);
+  }
+};
+</script>
+</body>
+</html>

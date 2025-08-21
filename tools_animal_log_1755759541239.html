@@ -1,0 +1,113 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Animal Log</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/util.js"></script>
+</head>
+<body><main>
+<h1>Animal Log</h1>
+
+<div class="card">
+  <div class="grid">
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Mouse ID</label><input id="mouse_id"></div>
+    <div><label>Strain</label><input id="strain" placeholder="e.g., C57BL/6J"></div>
+    <div><label>Sex</label><select id="sex"><option>F</option><option>M</option></select></div>
+    <div><label>Date of Birth</label><input id="dob" type="date"></div>
+    <div><label>Age (weeks, auto)</label><input id="age" disabled></div>
+    <div><label>Treatment</label><input id="tx" placeholder="e.g., LPS 1 mg/kg/day"></div>
+    <div><label>Weight (g)</label><input id="wt" type="number" step="0.1"></div>
+  </div>
+  <label>Notes</label><textarea id="notes" rows="3" placeholder="Observations, health, procedures..."></textarea>
+  <div class="actions">
+    <button id="add">Add entry</button>
+    <button id="saveServer">Save to server (CSV)</button>
+    <button id="export">Export CSV (local)</button>
+    <button id="clear">Clear all (local)</button>
+  </div>
+  <p class="small">Local entries persist in your browser and can be exported. “Save to server” appends to <code>data/animal_log.csv</code> on the host.</p>
+</div>
+
+<div class="card">
+  <table id="tbl"><thead>
+    <tr><th>Date</th><th>Mouse ID</th><th>Strain</th><th>Sex</th><th>DOB</th><th>Age (wk)</th><th>Treatment</th><th>Weight (g)</th><th>Notes</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+const key='animal_log_v1'; const state=loadLocal(key,[]);
+date.value=todayISO();
+
+function calcAgeWeeks(d){
+  if(!d) return '';
+  const d1=new Date(d), d2=new Date(date.value||new Date());
+  return ((d2-d1)/1000/60/60/24/7).toFixed(1);
+}
+
+function render(){
+  age.value = calcAgeWeeks(dob.value);
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  state.forEach(r=>{
+    const tr=document.createElement('tr');
+    r.forEach(v=>{ const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); });
+    tb.appendChild(tr);
+  });
+  saveLocal(key,state);
+}
+
+dob.onchange=render; date.onchange=render;
+
+// Create a row object from inputs
+function makeRowObj(){
+  return {
+    date: date.value,
+    mouse_id: mouse_id.value.trim(),
+    strain: strain.value.trim(),
+    sex: sex.value,
+    dob: dob.value,
+    age_wk: calcAgeWeeks(dob.value),
+    treatment: tx.value.trim(),
+    weight_g: wt.value,
+    notes: notes.value.trim()
+  };
+}
+
+// Add entry locally
+document.getElementById('add').onclick=()=>{
+  const o = makeRowObj();
+  const row=[o.date,o.mouse_id,o.strain,o.sex,o.dob,o.age_wk,o.treatment,o.weight_g,o.notes];
+  state.push(row); render();
+};
+
+// Append to server CSV immediately
+document.getElementById('saveServer').onclick=async ()=>{
+  const o = makeRowObj();
+  try{
+    const res = await fetch('/append_csv', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ csv_name:'animal_log', row:o })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){ alert('Server save failed: ' + (data.error||res.status)); }
+    else { alert('Saved on server: ' + data.path); }
+  }catch(e){
+    alert('Network error saving to server: ' + e);
+  }
+};
+
+document.getElementById('export').onclick=()=>{
+  const header=['Date','Mouse ID','Strain','Sex','DOB','Age (wk)','Treatment','Weight (g)','Notes'];
+  downloadCSV('animal_log_local.csv', [header, ...state]);
+};
+
+document.getElementById('clear').onclick=()=>{
+  if(confirm('Clear all local entries?')){ state.length=0; render(); }
+};
+
+render();
+</script>
+</body></html>

@@ -1,0 +1,65 @@
+
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dilution Calculator</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/util.js"></script>
+</head>
+<body><main>
+<h1>Dilution Calculator</h1>
+<div class="card">
+  <h3>Simple ratio (e.g., 1:500)</h3>
+  <div class="grid">
+    <div><label>Total volume (µL)</label><input id="tot1" type="number" step="1" value="1000"></div>
+    <div><label>Dilution ratio</label><input id="ratio" placeholder="1:500" value="1:500"></div>
+  </div>
+  <div class="actions"><button id="calc1">Calculate</button></div>
+  <div class="kv">
+    <div>Stock volume:</div><div id="out_stock1">–</div>
+    <div>Diluent volume:</div><div id="out_dil1">–</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>C1V1 = C2V2</h3>
+  <div class="grid">
+    <div><label>C1 (stock conc.)</label><input id="c1" type="number" step="0.0001" placeholder="e.g., 2"></div>
+    <div><label>C2 (final conc.)</label><input id="c2" type="number" step="0.0001" placeholder="e.g., 0.002"></div>
+    <div><label>Total volume V2 (mL)</label><input id="v2" type="number" step="0.001" value="10"></div>
+    <div><label>Units</label>
+      <select id="units"><option>mg/mL</option><option>µg/mL</option><option>ng/mL</option></select>
+    </div>
+  </div>
+  <div class="actions"><button id="calc2">Calculate</button></div>
+  <div class="kv">
+    <div>V1 (stock to add):</div><div id="out_v1">–</div>
+    <div>Diluent volume:</div><div id="out_dil2">–</div>
+  </div>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+function parseRatio(s){
+  const m = s.replace(/\s+/g,'').match(/(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)/);
+  if(!m) return null; return [parseFloat(m[1]), parseFloat(m[2])];
+}
+calc1.onclick=()=>{
+  const r = parseRatio(ratio.value); if(!r){ alert('Invalid ratio'); return; }
+  const tot = parseFloat(tot1.value);
+  const stock = tot * (r[0]/(r[0]+r[1]));
+  const dil = tot - stock;
+  out_stock1.textContent = stock.toFixed(2)+' µL';
+  out_dil1.textContent = dil.toFixed(2)+' µL';
+};
+calc2.onclick=()=>{
+  const C1=parseFloat(c1.value), C2=parseFloat(c2.value), V2=parseFloat(v2.value); // mL
+  if([C1,C2,V2].some(x=>!isFinite(x)||x<=0)){ alert('Enter positive numbers'); return; }
+  const V1 = (C2*V2)/C1;          // mL
+  const dil = V2 - V1;
+  out_v1.textContent = (V1*1000).toFixed(2)+' µL';
+  out_dil2.textContent = (dil*1000).toFixed(2)+' µL';
+};
+</script>
+</body></html>

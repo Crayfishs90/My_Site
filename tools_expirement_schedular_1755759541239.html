@@ -1,0 +1,59 @@
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Experiment Scheduler</title>
+<link rel="stylesheet" href="assets/style.css"><script src="assets/util.js"></script>
+</head><body><main>
+<h1>Experiment Scheduler</h1>
+
+<div class="card">
+  <div class="grid">
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Title</label><input id="title" placeholder="e.g., LPS+ROT gut barrier"></div>
+    <div><label>PI</label><input id="pi"></div>
+    <div><label>Operator</label><input id="operator"></div>
+    <div><label>Species</label><input id="species" value="mouse"></div>
+    <div><label>n (planned)</label><input id="n_planned" type="number" step="1" min="1"></div>
+    <div><label>Groups</label><input id="groups" placeholder="e.g., Veh,LPS,LPS+ROT"></div>
+    <div><label>Due</label><input id="due" type="date"></div>
+    <div><label>Status</label>
+      <select id="status"><option>planned</option><option>active</option><option>completed</option><option>cancelled</option></select>
+    </div>
+  </div>
+  <label>Notes</label><textarea id="notes" rows="2"></textarea>
+  <div class="actions"><button id="save">Save to server</button></div>
+</div>
+
+<div class="card">
+  <table id="tbl"><thead>
+    <tr><th>Date</th><th>Title</th><th>PI</th><th>Operator</th><th>Species</th><th>n</th>
+        <th>Groups</th><th>Due</th><th>Status</th><th>Notes</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+const key='exp_sched_v1', state=loadLocal(key,[]);
+date.value=todayISO();
+
+function obj(){
+  return { date:date.value, title:title.value.trim(), pi:pi.value.trim(), operator:operator.value.trim(),
+           species:species.value.trim(), n_planned:n_planned.value, groups:groups.value.trim(),
+           due:due.value, status:status.value, notes:notes.value.trim() };
+}
+function render(){
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  state.forEach(r=>{const tr=document.createElement('tr'); r.forEach(v=>{const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);}); tb.appendChild(tr);});
+  saveLocal(key,state);
+}
+document.getElementById('save').onclick=async()=>{
+  const o=obj(); state.push(Object.values(o)); render();
+  try{
+    const r=await fetch('/append_csv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_name:'experiment_schedule',row:o})});
+    const t=await r.text(); let j={}; try{j=JSON.parse(t)}catch{}
+    if(!r.ok||!j.ok) alert('Server save failed: '+(j.error||t));
+  }catch(e){alert('Network error: '+e);}
+};
+render();
+</script>
+</body></html>

@@ -1,0 +1,50 @@
+
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slide Registry</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/util.js"></script>
+</head>
+<body><main>
+<h1>Slide Registry</h1>
+<div class="card">
+  <div class="grid">
+    <div><label>Slide ID</label><input id="sid" placeholder="e.g., M12-SNpc-04"></div>
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Tissue / Region</label><input id="region" placeholder="e.g., SNpc, Ileum"></div>
+    <div><label>Thickness (µm)</label><input id="thick" type="number" step="1" value="30"></div>
+    <div><label>Stain(s)</label><input id="stains" placeholder="e.g., TH, DAPI"></div>
+    <div><label>Storage (Box/Pos)</label><input id="box" placeholder="e.g., Box12 A3"></div>
+  </div>
+  <label>Notes</label><textarea id="notes" rows="3"></textarea>
+  <div class="actions">
+    <button id="add">Add slide</button>
+    <button id="export">Export CSV</button>
+    <button id="clear">Clear all</button>
+  </div>
+</div>
+<div class="card">
+  <table id="tbl"><thead>
+    <tr><th>Slide ID</th><th>Date</th><th>Region</th><th>Thickness</th><th>Stains</th><th>Storage</th><th>Notes</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+<nav><a href="index.html">⟵ Back to Dashboard</a></nav>
+</main>
+<script>
+const key='slide_registry_v1'; const state=loadLocal(key,[]);
+date.value=todayISO();
+function render(){
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  state.forEach(r=>{ const tr=document.createElement('tr'); r.forEach(v=>{const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);}); tb.appendChild(tr); });
+  saveLocal(key,state);
+}
+document.getElementById('add').onclick=()=>{
+  const row=[sid.value, date.value, region.value, thick.value, stains.value, box.value, notes.value];
+  state.push(row); render();
+};
+document.getElementById('export').onclick=()=>downloadCSV('slide_registry.csv',[['Slide ID','Date','Region','Thickness (µm)','Stains','Storage','Notes'],...state]);
+document.getElementById('clear').onclick=()=>{ if(confirm('Clear all?')){ state.length=0; render(); } };
+render();
+</script>
+</body></html>
